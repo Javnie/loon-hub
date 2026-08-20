@@ -1,0 +1,45 @@
+#!name = 🍿️ DualSubs: 🎵 Spotify（外部优先）
+#!desc = 外部歌词优先；无外部原文时回退 Spotify 官方歌词翻译为双语。基于 DualSubs Spotify v1.9.12 的请求阶段定制。
+#!openUrl = http://boxjs.com/#/app/DualSubs.Spotify
+#!author = VirgilClyne（上游）/ 外部优先定制（本仓库）
+#!homepage = https://github.com/Javnie/loon-hub
+#!icon = https://github.com/DualSubs/Spotify/raw/main/src/assets/icon_rounded.png
+#!tag = DualSubs, Spotify
+#!system = iOS,iPadOS,macOS
+#!date = 2026-08-21 02:05:46
+#!version = 1.9.12-remix.1
+#!system_version = 15
+
+# 把本文件和同目录的 DualSubs.Spotify.request.bundle.js 一起放到 GitHub 公开仓库后，
+# Loon 用本文件的 raw 地址订阅即可。本仓库已把请求脚本写成完整 HTTPS 地址。
+# 若复制到其他仓库，请同步修改下面两处 request 的 script-path。
+# 本次只改请求阶段选路：外部源有原文 -> External；没有则官方歌词走 Translate。
+# Translate / External 的响应脚本仍用 DualSubs Universal，不改展示依赖。
+
+[Argument]
+Types = input,"External,Translate",tag=[歌词] 启用类型（多选）,desc=默认外部歌词优先；若外部源无原文歌词，自动回退官方歌词并翻译。
+Languages[0] = select,"AUTO","ZH","ZH-HANS","ZH-HK","ZH-HANT","EN","ES","JA","KO","DE","FR","TR","KM",tag=[翻译器] 主语言（源语言）,desc=仅当源语言识别不准确时更改此选项。
+Languages[1] = select,"ZH","ZH-HANS","ZH-HK","ZH-HANT","EN","ES","JA","KO","DE","FR","TR","KM",tag=[翻译器] 副语言（目标语言）,desc=请指定翻译歌词的目标语言。
+Vendor = select,"Google","Microsoft",tag=[翻译器] 服务商API,desc=请选择翻译器所使用的服务商API，更多翻译选项请使用BoxJs。
+LrcVendor = select,"NeteaseMusic","QQMusic","NeteaseMusicNodeJS",tag=[歌词] 服务商API,desc=默认网易云音乐。命中外部原文时替换官方歌词；包含翻译时在 App 显示翻译按钮、Web 显示双行。
+LogLevel = select,"WARN","OFF","ERROR","INFO","DEBUG","ALL",tag=[调试] 日志等级,desc=选择脚本日志的输出等级，低于所选等级的日志将全部输出。
+
+[Script]
+# Tracks 元数据仍走官方 DualSubs/Spotify v1.9.12
+http-response ^https?:\/\/api\.spotify\.com\/v1\/tracks\? requires-body=1, script-path=https://github.com/DualSubs/Spotify/releases/download/v1.9.12/response.bundle.js, tag=🍿️ DualSubs.Spotify.Tracks.response.json, argument=[{Types},{Languages[0]},{Languages[1]},{Vendor},{LrcVendor},{LogLevel}]
+
+# 请求阶段选路：本仓库定制脚本，使用完整 raw URL
+http-request ^https?:\/\/(.+-spclient|spclient\.wg)\.spotify\.com(:443)?\/color-lyrics\/v2\/track\/(.+)\?(.*)format=json requires-body=1, script-path=https://raw.githubusercontent.com/Javnie/loon-hub/main/plugin/DualSubs.Spotify/DualSubs.Spotify.request.bundle.js, tag=🍿️ DualSubs.Spotify.Lyrics.request.json, argument=[{Types},{Languages[0]},{Languages[1]},{Vendor},{LrcVendor},{LogLevel}]
+http-request ^https?:\/\/(.+-spclient|spclient\.wg)\.spotify\.com(:443)?\/color-lyrics\/v2\/track\/\w+\?(.*) requires-body=1, binary-body-mode=1, script-path=https://raw.githubusercontent.com/Javnie/loon-hub/main/plugin/DualSubs.Spotify/DualSubs.Spotify.request.bundle.js, tag=🍿️ DualSubs.Spotify.Lyrics.request.proto, argument=[{Types},{Languages[0]},{Languages[1]},{Vendor},{LrcVendor},{LogLevel}]
+
+# 翻译展示仍走官方 DualSubs Universal，不改依赖
+http-response ^https?:\/\/(.+-spclient|spclient\.wg)\.spotify\.com(:443)?\/color-lyrics\/v2\/track\/(.+)\?(.*)format=json(.*)subtype=Translate requires-body=1, script-path=https://github.com/DualSubs/Universal/releases/latest/download/Translate.response.bundle.js, tag=🍿️ DualSubs.Spotify.Translate.Lyrics.response.json, argument=[{Types},{Languages[0]},{Languages[1]},{Vendor},{LrcVendor},{LogLevel}]
+http-response ^https?:\/\/(.+-spclient|spclient\.wg)\.spotify\.com(:443)?\/color-lyrics\/v2\/track\/\w+\?(.*)subtype=Translate requires-body=1, binary-body-mode=1, script-path=https://github.com/DualSubs/Universal/releases/latest/download/Translate.response.bundle.js, tag=🍿️ DualSubs.Spotify.Translate.Lyrics.response.proto, argument=[{Types},{Languages[0]},{Languages[1]},{Vendor},{LrcVendor},{LogLevel}]
+
+# 外部源替换仍走官方 DualSubs Universal
+http-response ^https?:\/\/(.+-spclient|spclient\.wg)\.spotify\.com(:443)?\/color-lyrics\/v2\/track\/(.+)\?(.*)format=json(.*)subtype=External requires-body=1, script-path=https://github.com/DualSubs/Universal/releases/latest/download/External.Lyrics.response.bundle.js, tag=🍿️ DualSubs.Spotify.External.Lyrics.response.json, argument=[{Types},{Languages[0]},{Languages[1]},{Vendor},{LrcVendor},{LogLevel}]
+http-response ^https?:\/\/(.+-spclient|spclient\.wg)\.spotify\.com(:443)?\/color-lyrics\/v2\/track\/\w+\?(.*)subtype=External requires-body=1, binary-body-mode=1, script-path=https://github.com/DualSubs/Universal/releases/latest/download/External.Lyrics.response.bundle.js, tag=🍿️ DualSubs.Spotify.External.Lyrics.response.proto, argument=[{Types},{Languages[0]},{Languages[1]},{Vendor},{LrcVendor},{LogLevel}]
+
+[MITM]
+# Spotify App / Web 歌词接口；hostname 与上游 DualSubs Spotify v1.9.12 对齐
+hostname = api.spotify.com, spclient.wg.spotify.com, *-spclient.spotify.com
